@@ -113,3 +113,39 @@ A note on measurement: a single episode is far too noisy to tune against — the
 per-episode standard deviation is 60–100, while the never-quarantine baseline ranges
 from 1040 to 2720 across episodes. Differences smaller than about 15 points need 40+
 seeds to resolve, which is what `evaluate.py` exists for.
+
+## Contributions
+
+This began as a two-person university project. An earlier version by my teammate set
+up the overall structure and the parameter-estimation statistics, and established
+that the PCR assay reports one shift late — the most valuable modelling insight in
+the project.
+
+The work in this repository is mine:
+
+- **Inference.** Recast the problem as a factorial HMM solved by structured
+  mean-field — exact forward–backward per chain, chains reconciled by iterating
+  (`chain_smooth`, `smooth`, `evidence_likelihood`). Establishing that the backward
+  pass is load-bearing took an explicit experiment: iterated *forward* passes
+  reproduce plain filtering to the digit, because within a chain later evidence never
+  travels backwards.
+- **Decision rule.** Reformulated clear/quarantine as optimal stopping rather than
+  classification, and implemented a one-step lookahead on the belief-state MDP. The
+  clear-forever cost is precomputed as a linear functional of the belief, which is
+  what makes exact enumeration of all 36 next-shift sensor outcomes affordable
+  (`lookahead_clear_cost`, `_build_clear_cost_table`, `_build_observation_outcomes`).
+  Worth 13 points of cost.
+- **Contact model.** Replaced per-contact thresholding with the expected-hazard
+  product over room-mates' `P(I)`, and pooled the bucketed transmission estimates
+  into a single β rather than trusting small-sample buckets. The largest single
+  improvement in the project, worth 40 points.
+- **Correctness.** Restored the `I → R` row of the transition kernel, put the
+  estimated delayed-PCR table to actual use at inference, and fixed the quarantine
+  cost, which had been discounted by `P(not infected)` despite being incurred
+  unconditionally.
+- **Evaluation.** Built `evaluate.py` and ran every ablation and diagnostic above,
+  including the oracle and gradient-boosting baselines that bound how much headroom
+  is left.
+
+Developed with AI assistance (Claude) for implementation and experiment design; the
+modelling decisions, trade-offs and verification are my own.
